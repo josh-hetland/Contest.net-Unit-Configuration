@@ -13,7 +13,7 @@ Steps taken to create the master image for the contestnet terminal units
 #Created new user accounts
 # Support
 	sudo adduser support
-#	Password: f!><m3Up
+#	Password: ***********
 	sudo adduser support adm, dialout, cdrom, sudo, audio, video, plugdev, games, users, netdev, input
 
 # Run
