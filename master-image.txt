@@ -1,0 +1,143 @@
+Steps taken to create the master image for the contestnet terminal units
+=================================================================================
+#Flashed 2013-05-25-wheezy-raspbian.zip image to SD card
+	dd bs=4M if=2013-05-25-wheezy-raspbian.img of=/dev/mmcblk0
+
+#Through the raspi-config utility 
+#  set the local to en_US-UTF8
+#  set the timezone to us central
+#  set the keymap to Generic 105-key (intr) > other > US > English US
+#  set the hostname to 'contestnet-unit0'
+#  set SSH server enabled
+
+#Created new user accounts
+# Support
+	sudo adduser support
+#	Password: f!><m3Up
+	sudo adduser support adm, dialout, cdrom, sudo, audio, video, plugdev, games, users, netdev, input
+
+# Run
+	sudo adduser run
+#	Password: running
+	sudo adduser run adm, dialout, cdrom, sudo, audio, video, plugdev, games, users, netdev, input
+
+#Connected ethernet cable and ran updates
+	sudo apt-get update
+	sudo apt-get upgrade
+	sudo apt-get install unclutter, feh, vim, xterm, libwww-perl, libjson-perl
+
+#Configured and updated CPAN
+	cpan install CPAN
+#	(sudo configuration and defaults for all questions)
+
+#Installed perl library for getting network interface information
+	cpan install IO::Interface::Simple
+	
+#Created application directory and sub directories
+	mkdir /opt/contestnet bin,etc,lib,log,var
+	
+#Set background color in openbox to match that of the background image background
+	@/etc/X11/openbox/autostart
+	xsetroot -solid "#b0b0b0"
+
+#Set hdmi force hotplug option in the config and added a commented out line to apply settings based on edid.dat file
+	@/boot/config.txt
+	hdmi_force_hotplug=1
+	#hdmi_edid_file=1
+
+#Added the pregenerated edid.dat file from the westinghouse 32" tv to app etc
+	@/opt/contestnet/etc/edid-westinghouse-32.dat
+
+#Created the contestnet.conf file and populated it with the default id of 0
+	@/opt/contestnet/etc/contestnet.conf
+	Id=0
+	
+#Added background file to app etc
+	@/opt/contestnet/etc/background.jpg
+	
+#Added logger module file to app lib
+	@/opt/contestnet/lib/Logger.pm
+
+#Updated network adapter settings
+	@/etc/network/interfaces
+	auto lo
+	iface lo inet loopback
+	auto eth0
+	iface eth0 inet dhcp
+	auto wlan0
+	allow-hotplug wlan0
+	iface wlan0 inte manual
+		wpa-roam /etc/wpa-supplicant.conf
+	iface default inet dhcp
+	
+#Updated wpa_supplicant configuration
+	@/etc/wpa_supplicant/wpa_supplicant.conf
+	
+#Installed partial-software root certificate
+	sudo cp partial-software-ca.crt /usr/share/ca-certificates/partial-software/
+	sudo dpkg-reconfigure ca-certificates
+	sudo update-ca-certificates
+	
+#Installed contestnet software on system
+	Copied source files and resources to the /opt/contestnet folder
+
+#Set run user to auto login
+	@/etc/inittab
+	1:2345:respawn:/bin/login -f run 
+	
+#Set Run user to run contestnet terminal application on login and exit when it closes (creating a login loop that kicks it back off)
+	@/home/run/.bashrc
+	xinit /opt/contestnet/bin/launcher
+	exit
+	
+#Set all members of sudo group to be able to sudo without password
+	sudo visudo
+	%sudo ALL=(ALL) NOPASSWD: ALL
+	
+#Installed Config::IniFiles module from cpan
+	cpan install Config::IniFiles
+
+#Copied loopable version of omxplayer to /opt/omxplayer (tarball must be unzipped on the machine or it won't work)
+	sudo mv omxplayer-loop-multifile-bin.tar.gz /opt
+	sudo tar -xzvf omxplayer-loop-multifile-bin.tar.gz
+	sudo mv omxplayer-dist omxplayer
+	sudo mv omxplayer /opt/omxplayer/usr/bin/omxplayer
+	sudo chmod ugo+x /opt/omxplayer/usr/bin/omxplayer
+	sudo chown -R run:users /opt/omxplayer
+	
+#Added latest version of launcher and worker
+#Disabled the auto launch in /home/run/.bashrc
+
+#Restored master card from contestnet-master-003.img after filling it up while applying updates
+#Resized partition to 3.7GB to make room for futher updates (gparted offline)
+
+#Applied additional updates
+	sudo apt-get update
+	sudo apt-get upgrade
+	
+#Added wireless-monitor to /opt
+	sudo mkdir /opt/wireless-monitor
+	sudo mkdir /opt/wireless-monitor/bin
+	sudo mkdir /opt/wireless-monitor/log
+	sudo touch /opt/wireless-monitor/log/wireless-monitor.log
+	sudo cp wireless-monitor /opt/wireless-monitor/bin
+	sudo chown -R run:users /opt/wireless-monitor
+	
+#Created root cronttab and added entry for wireless-monitor to run every 5 minutes and forces the wireless adapter up if it does not have an address
+# */5 * * * * /opt/wireless-monitor/bin/wireless-monitor
+
+#Disabled the crontab entry so it does not happen in the base image. this will need to be added to the customization checklist for generating new disks.
+
+!! Need to get the edid file for the panasonics included in the base image
+!! Need to install the cec utility
+
+#Applied additional updates
+	sudo apt-get update
+	sudo apt-get upgrade
+
+#Installed the cec-util package to allow for control of connected units through CEC.
+	sudo apt-get install cec-utils
+	sudo apt-get install liblockdev1
+	dpkg -i libcec-2.1.0-1
+	
+#	I should probably update the way that the terminal software interacts with the display to make it modular

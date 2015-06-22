@@ -1,0 +1,82 @@
+Installaions necessary to configure a Raspberry Pi (rasbian wheezy) for use
+
+set keymap to "us" in /etc/default/keyboard
+
+adduser kiosk ? maybe not this name run? 
+adduser kiosk users
+adduser support *************
+adduser admin
+deluser pi (get rid of home directory too)
+pi user is a memeber of : pi, adm, dialout, cdrom, sudo, audio, video, plugdev, games, users, netdev, input, idiecity
+
+Create a 0440 file owned by root:root called /etc/sudoers.d/users_allowances with "%users ALL=(ALL) NOPASSWD: /sbin/shutdown"
+
+apt-get update
+apt-get upgrade
+apt-get install unclutter
+apt-get install feh
+apt-get install vim
+apt-get install firmware-ralink
+apt-get install x11-xserver-utils
+apt-get install xterm
+
+copy partial-software-ca.crt to /usr/share/ca-certificates
+sudo update-ca-certificates
+
+[2013/03/26] applied new upgrades (several)
+
+## HDMI output not active when powered by TV USB port
+## the display is taking to long to come up and the Pi is not enabling it
+
+@/boot/config.txt
+hmdi_force_hotplug=1
+
+## this forces it to HDMI mode so an HDMI device can be connected after boot but the settings are wrong
+## the most compatible way would be to make the Pi wait a couple of seconds for the display to come on in the VERY beginning
+
+## The display settings can be hard set by an edid file
+## create the edid.dat file in the boot directory (this is specific to the display that is connected when ran)
+sudo tvservice -d /boot/edid.dat
+## having this file pregenerated should work, possibly store them in the app directory with a way to issue a command to copy it in place
+## if hdmi_edid_file is set and there is no edid.dat file it will come up wrong every time.
+## so this will likely need to be set up on a per display basis with a way swap it out.
+
+## Enable the use of the edid.dat file in the config.txt
+@/boot/config.txt
+hdmi_edid_file=1
+
+## there is a boot_delay=[seconds] option for config.txt but anything greater than 3 seems to not boot at all, and 3 or less is not enough
+## to allow the display to come up far enough for detecting. so we're back to having the edid.dat file specific to the monitor
+## i could possibly detect the display information and update it on each boot but that could be bad if it detects poorly
+## maybe there should be a way to tell it to update
+
+sudo apt-get install libwww-perl
+sudo apt-get install libjson-perl
+
+## hmm, the wifi is not recovering from disconnect any more.....
+## i may need to build in something that can bounce networking if it is disconnected, just a restart of the service doesn't seem to work either
+## i had to ifdown --force wlan0 and then ifup wlan0 to get it back just now
+## i had to ifdown --force wlan0 and then ifup wlan0 to get it back just now
+
+### pi goes off when it goes to deep sleep mode, this is a no-go
+	## looking at the ability to put the monitor to sleep on a schedule to save energy and increase tv life
+	## this has the xrefresh utility needed to wake it back up (if sleeping works at all)
+	#sudo apt-get install x11-xserver-utils
+
+	## state 0x120016 [DVI  RGB full 16:9], 1366x768 @ 60Hz, progressive
+	## state 0x120002 [TV is off]
+	## it has the 'no signal' thing bouncing around, but will it go to deeper sleep after some time?
+
+## not sure where i ended up putting the xset commands to disable blanking, it was in some environment file for xinit
+## either way, running the command to put it to sleep and wake it up seem to reset those, so they will need to be run each time the state is changed
+## and probably once every time the application starts (so add it to launcher)
+
+## the powerdown process should set tvservice -o first to make sure that power is eventually cut to the pi
+
+## attempting to install IO::Interface::Simple module from CPAN to handle getting adapter details needed for reporting during checkin
+
+## opened cpan shell and ran through configuration
+install CPAN
+reload cpan
+install IO::Interace::Simple
+install HTTP::Request::Common #maybe, not sure
