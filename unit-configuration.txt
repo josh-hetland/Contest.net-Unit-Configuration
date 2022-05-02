@@ -1,0 +1,59 @@
+### --------------------------------------- ###
+###     Steps To Configure A New Unit
+### --------------------------------------- ###
+
+# Clone the current master image to a new microSD card
+	sudo dd bs=4M if=contestnet-unit-master-2.0-r005.img of=/dev/mmcblk0 status=progress
+
+
+# Expand the root filesystem partition out to use the available space
+#	Note: 	Eject and reinsert the SD card after applying the image before trying
+#					to expand the filesystem, and again after before accessing the partitions.
+	sudo gparted
+
+# Set the target display edid.dat file if applicable
+# Copy the edid file from the etc directory to the boot partition as edid.dat
+	sudo cp $TargetOSDirectory/opt/contestnet/etc/edid-westinghouse-32.dat $TargetBootDirectory/edid.dat
+# Uncomment the use edid directive in the config.txt file on the boot partition
+#	@/boot/config.txt
+#	hdmi_edid_file=1
+#	Note:	In the event that a new edid is needed, boot the system under ideal conditions
+#			to allow the Pi to recognize the display, and generate a new edid file using the command
+#	tvservice -d /opt/contestnet/etc/edid-[displayname]-[displaysize].dat
+
+# Set the hostname of the new unit by editing the /etc/hostname file on the system partition
+#	@/system/etc/hostname
+#	unit-X (where X is the unit ID)
+
+# Enable the contestnet launcher for the run user by uncommenting the lines at the bottom of .bashrc
+#	@/home/run/.bashrc
+#	### -------------- Start Contestnet Terminal Application -------------- ###
+#	xinit /opt/contestnet/bin/launcher
+#	exit
+#	### ------------------------------------------------------------------- ###
+
+# Set the network configuration information for the intended location
+#	If the SSID is unknown you can scan to list what is available
+iwlist wlan0 scan
+wpa_passphrase SSID Password
+# Add the output of the above command to the wireless configuration file
+#	@/etc/wpa_supplicant/wpa_supplicant.conf
+#	### -------------------------- Location Name -------------------------- ###
+#	network={
+#		scan_ssid=1
+#		ssid="[SSID from above]"
+#		key_mgmt=WPA-PSK
+#		priority=90
+#		psk=[KEY from above]
+#	}
+#	### ------------------------------------------------------------------- ###
+
+# Set the Unit id in the application configuration file
+#	@/opt/contestnet/etc/contestnet.conf
+#	id=[IdNumber]
+
+# Enable the wireless-monitor cron job
+#	@/????
+#	*/5 * * * * /opt/wireless-monitor/bin/wireless-monitor
+
+### Unit OS is ready for use
