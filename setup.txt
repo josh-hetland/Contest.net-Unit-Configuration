@@ -1,10 +1,12 @@
+DEPRICATED - see master-image.txt and unit-configuration.txt for current setup details
+
 Installaions necessary to configure a Raspberry Pi (rasbian wheezy) for use
 
 set keymap to "us" in /etc/default/keyboard
 
 adduser kiosk ? maybe not this name run? 
 adduser kiosk users
-adduser support *************
+adduser support ******* (see .secrets file)
 adduser admin
 deluser pi (get rid of home directory too)
 pi user is a memeber of : pi, adm, dialout, cdrom, sudo, audio, video, plugdev, games, users, netdev, input, idiecity
