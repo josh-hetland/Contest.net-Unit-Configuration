@@ -21,9 +21,12 @@ The instructions are broken into two main parts
 This is the step by step process for taking a vanilla raspbian image and getting it ready to be a master image
 that will be cloned for each unit.
 
-Currently all of the steps are captured in [master-image.txt](./master-image.txt)
+These instructions change slightly over time as the raspbian images have changed so i am tracking them
+in separate files for historical reference
 
-> I intend to convert this to markdown, since it won't likely ever be a straight script
+* [Bullseye Image](./MASTER-IMAGE-BULLSEYE.md)
+* [Jessie Image](./master-image.txt)
+
 
 ## Unit Setup
 
