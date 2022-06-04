@@ -73,7 +73,7 @@ sudo apt install unclutter feh xterm libwww-perl libjson-perl cec-utils chromium
 > and then reboot / restart the sequence once set to go back into the loop and check (and then pass) again so it can start up normal
 
 
-## Installed perl library for getting network interface information and ini read/write module
+## Install perl library for getting network interface information and ini read/write module
 ```sh
 sudo cpan
 # Autoconfiguration, and accepted all defaults for CPAN
@@ -98,28 +98,135 @@ sudo mkdir -p /opt/contestnet/var
 sudo chmod -R go+w /opt/contestnet
 ```
 
+
+## Create directory structure for wireless-monitor
+```sh
+sudo mkdir -p /opt/wireless-monitor/bin
+sudo mkdir -p /opt/wireless-monitor/log
+
+sudo touch /opt/wireless-monitor/log/wireless-monitor.log
+```
+
+
+## Setting the TV configuration
+
+The computer senses display settings on start up, and dynamically configures certain
+properties based on what it finds.
+
+This is undesirable in our case since we have a fixed desired configuration and can't
+necessarily control the order of operations during startup since remote, restarts are
+a very common scenario.
+
+Edit `/boot/config.txt` to force enable the HDMI port regardless of the detected presense of
+an HDMI connection
+
+```sh
+hdmi_force_hotplug=1
+```
+
+When setting up a specific unit we will also be forcing an EDID configuration
+
+Add a commented out line to `/boot/config.txt` to speed up unit configuration
+
+```sh
+#hdmi_edid_file=1
+```
+
+> when setting a device up you will uncomment this file and either generate
+> or select one of the precreated EDID files.
+>
+> With this setting enabled, it will load the settings from `/boot/edid.dat`
+
+### Creating a TV specific EDID file
+
+when the computer detects a display it collects details about the display such as its frequency,
+orientation, dimensions, and capabilities.
+
+You can also store these in a file and direct the computer to use these settings for the display
+even if it is not present, which is handy for the display units because we cannot ensure that
+the TV is on and detectable when the unit is powered on.
+
+by configuring it to force the settings from file regardless of the presence of the TV
+protects against getting odd display settings, so we generate an EDID file
+for the TV type and force it on a per unit basis.
+
+To gengerate an EDID file for a display, start the Pi with the display on so it is properly detected
+and visually confirm that things look right.
+
+Once set run the following command to generate a display specific EDID file
+
+```sh
+sudo tvservice -d /opt/contestnet/etc/edid-[displayname]-[displaysize].dat
+```
+
+> Replace [displayname] & [displaysize] with the relevent information
+> such as `edid-westinghouse-32.dat`
+>
+> I have been storing these as they come along for easy remote configuration
+> since we can send the appropriate commands to copy the right file into place
+> and trigger a restart of the system incase it is needed (it hasn't been to date though) 
+
+
+## Configure openbox default background color
+
+We set the a [background image](./src/opt/contestnet/background.jpg) that has the SALMON-A-RAMA logo on a grey background
+with the contest.net powered by logo in the bottom. When openbox starts there is a short period where the background image
+has not loaded yet, and to make it less jarring, we set the background color for openbox to match the background color
+of the image that will be loaded quickly after
+
+Edit `/etc/X11/openbox/autostart` to include
+```sh
+xsetroot -solid "#b0b0b0"
+```
+
+
+## Allow the use of SUDO without password for sudo group members
+
+The remote command component of the worker process is used for running maintenance operations
+on the system that will often need to be prefixed with sudo, so the system is set up to let those
+happen.
+
+```sh
+sudo visudo
+```
+
+```sh
+%sudo ALL=(ALL) NOPASSWD: ALL
+```
+
+
+
 ## Copy Unit Files (from host system)
 
+For these steps the system needs to be shut back down and the OS drive moved to a source system
+that has this and the other repositories checked out and current on it.
 
-#	Set HTMI output to be active even if HDMI connections are not detected
-#	@/boot/config.txt
-#	hdmi_force_hotplug=1
+After moving the needed files onto the OS drive the remainder of the setup will take place
+back on the running system.
 
-#	Added a commented line in /boot/config.txt to enabled use of pregenerated edid.dat file
-#	@/boot/config.txt
-#	#hdmi_edid_file=1
-#	
-#	To generate an edid file for a display, start the Pi with the display on so it is properly detected
-#	then run `sudo tvservice -d /opt/contestnet/etc/edid-[displayname]-[displaysize].dat`
-# 	uncomment the hdmi_edid_file=1 line and copy the edid file to /boot/edid.dat
 
-#	Created Contesnet application structure
-sudo mkdir /opt/contestnet/bin
-sudo mkdir /opt/contestnet/etc
-sudo mkdir /opt/contestnet/lib 
-sudo mkdir /opt/contestnet/log
-sudo mkdir /opt/contestnet/var
-sudo chmod -R go+w /opt/contestnet
+### Contestnet
+
+### Wireless-Monitor
+
+> setup will be completed bac
+
+### Loopable OMX Player
+
+
+
+
+## Complete Wireless-Monitor Setup
+
+
+## Complete Loopable OMX Player
+
+
+
+## Not updated yet
+
+@TODO: where is Logger.pm? doesn't look like i included it in the worker file might need to grab it out of the old image
+
 #	Copied in contestnet application files from 1.0 source
 #	bin/
 #		launcher
@@ -138,20 +245,8 @@ sudo chmod -R go+w /opt/contestnet
 #	var/
 	
 
-#	Added setting of default background color for openbox
-#@/etc/X11/openbox/autostart
-#	xsetroot -solid "#b0b0b0"
 
-#	Installed partial-software root certificate as trusted CA
-sudo mkdir /usr/share/ca-certificates/partial-software
-sudo cp partial-software-ca.crt /usr/share/ca-certificates/partial-software/
-sudo dpkg-reconfigure ca-certificates 
-#	Select partial-software as trusted in the list
-#	(no longer need to run update-ca-certificates after, it happens automatically)
 
-#	Set ability for all members of sudo group to run sudo commands without password
-sudo visudo
-#	%sudo ALL=(ALL) NOPASSWD: ALL
 
 # 	Installed loopable version of omxplayer to /opt/omxplayer (tarball must be unzipped on machine)
 #	Source Files
