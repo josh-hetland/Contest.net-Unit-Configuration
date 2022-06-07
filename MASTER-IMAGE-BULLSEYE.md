@@ -207,12 +207,60 @@ back on the running system.
 
 ### Contestnet
 
+```sh
+SourceDir=~/displayunits
+TargetDir=/media/jlh/rootfs/opt/contestnet
+
+sudo cp $SourceDir/configuration/src/opt/contestnet/etc/* $TargetDir/etc/
+sudo cp $SourceDir/launcher/launcher $TargetDir/bin/
+sudo cp $SourceDir/worker/Logger.pm $TargetDir/lib/
+sudo cp $SourceDir/worker/worker $TargetDir/bin/
+```
+
+This should leave you with a directory structure such as
+```sh
+# tree opt/contestnet/
+opt/contestnet/
+├── bin
+│   ├── launcher
+│   ├── omxplayer-loop
+│   └── worker
+├── etc
+│   ├── background.jpg
+│   ├── contestnet.conf
+│   ├── edid-panasonic-50.dat
+│   ├── edid-westinghouse-32.dat
+│   └── task.ini
+├── lib
+│   └── Logger.pm
+├── log
+└── var
+
+5 directories, 9 files
+```
+
+
+
 ### Wireless-Monitor
 
 > setup will be completed bac
 
+
+```sh
+# tree opt/wireless-monitor/
+opt/wireless-monitor/
+├── bin
+│   └── wireless-monitor
+└── log
+
+2 directories, 1 file
+```
+
+
+
 ### Loopable OMX Player
 
+> copy the three files, two are temp locations
 
 
 
@@ -225,24 +273,6 @@ back on the running system.
 
 ## Not updated yet
 
-@TODO: where is Logger.pm? doesn't look like i included it in the worker file might need to grab it out of the old image
-
-#	Copied in contestnet application files from 1.0 source
-#	bin/
-#		launcher
-#		omxplayer-loop
-#		worker
-#		worker.restore (this should be removed)
-#	etc/
-#		background.jpg
-#		contestnet.conf
-#		edid-panasonic-50.dat
-#		edid-westinghouse-32.dat
-#		task.ini
-#	lib/
-#		Logger.pm
-#	log/
-#	var/
 	
 
 
