@@ -3,12 +3,14 @@
 * Flashed 2022-04-04-raspios-bullseye-armhf-lite.img.xy image to SD card (8GB MicroSD)
 
 > Used the official Raspberry PI Imager this time
+
 Direct Method _(for reference)_:
 ```sh
 dd bs=4M if=2015-05-05-raspbian-wheezy.img of=/dev/mmcblk0
 ```
 
 * booted OS on Unit#1
+
 
 ## raspi-config
 * set the local to en_US-UTF8 from raspi-config
@@ -17,10 +19,7 @@ dd bs=4M if=2015-05-05-raspbian-wheezy.img of=/dev/mmcblk0
 * set timezone to us central from raspi-config
 * set wirless channel localization to US
 * set hostname to 'contestnet-unit0
-* enabled SSH server
-> @TODO should limit it to the support user
 
-*	Extended partition out to 7,000MB using gparted (going to not do this this time)
 
 ## Install VIM
 > cause VI is terrible, and i couldn't wait 2 steps
@@ -37,6 +36,7 @@ sudo apt-get install unattended-upgrades apt-listchanges
 ```sh
 Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
 Unattended-Upgrade::Automatic-Reboot-Time "02:00";
 ```
 
@@ -51,9 +51,26 @@ sudo usermod -a -G adm,dialout,cdrom,sudo,audio,video,plugdev,games,users,input,
 ## Install Prerequisites
 * packages
 ```sh
-sudo apt install unclutter feh xterm libwww-perl libjson-perl cec-utils chromium-browser ttf-mscorefonts-installer
+sudo apt install unclutter feh xterm libwww-perl libjson-perl cec-utils chromium-browser ttf-mscorefonts-installer openbox vlc xserver-xorg xserver-xorg-legacy xinit
 ```
 > Previously liblockdev1 and libcec-2.1.0-1 need to be installed as well, now it is included with cec-utils
+
+
+## Reconfigure the xserver-xorg-legacy Wrapper
+
+The new defaults for X11 mean you can only run clients under certain configurations for security purposes.
+After hours of reading on how to do it "the right way" with no clear guide or end in sight, i stumbled across
+a forum post saying to reconfigure the legacy wrapper for SETGUID support.
+
+> I set the first value in this configuration by running `dpkg-reconfigure xserver-xorg-legacy` and selecting "Anybody"
+> having edited the file afterwards should keep it as is if the package is patched in the future (i hope)
+
+Edit `/etc/X11/Xwrapper.config`:
+
+```sh
+allowed_users=anybody
+needs_root_rights=yes
+```
 
 
 ## Add Default WiFi Configuration
@@ -137,6 +154,19 @@ Add a commented out line to `/boot/config.txt` to speed up unit configuration
 >
 > With this setting enabled, it will load the settings from `/boot/edid.dat`
 
+
+Edit the driver for backwards compatibility
+
+```sh
+dtoverlay=vc4-fkms-v3d
+```
+
+> The default in the image is `vc4-kms-v3d` which makes the `tvservice` command stop working
+> there are alternatives but it needs to be tested on all of the TV models, so for now
+> we are keeping it in compatibility mode, though this might be unviable by the next major
+> debian release
+
+
 ### Creating a TV specific EDID file
 
 when the computer detects a display it collects details about the display such as its frequency,
@@ -150,7 +180,7 @@ by configuring it to force the settings from file regardless of the presence of 
 protects against getting odd display settings, so we generate an EDID file
 for the TV type and force it on a per unit basis.
 
-To gengerate an EDID file for a display, start the Pi with the display on so it is properly detected
+To generate an EDID file for a display, start the Pi with the display on so it is properly detected
 and visually confirm that things look right.
 
 Once set run the following command to generate a display specific EDID file
@@ -194,6 +224,15 @@ sudo visudo
 %sudo ALL=(ALL) NOPASSWD: ALL
 ```
 
+## Shrink the rootfs partition down to 4GB
+
+To make it easier to unpack onto more disk sizes, the filesystem can be shrunk down to
+a smaller size that will fit on more disks
+
+> though all of them are 32gb+ now so this doesn't matter as much as it used to
+
+From a linux system, size the rootfs partition down to 4096Mib using GParted
+
 
 
 ## Copy Unit Files (from host system)
@@ -215,6 +254,8 @@ sudo cp $SourceDir/configuration/src/opt/contestnet/etc/* $TargetDir/etc/
 sudo cp $SourceDir/launcher/launcher $TargetDir/bin/
 sudo cp $SourceDir/worker/Logger.pm $TargetDir/lib/
 sudo cp $SourceDir/worker/worker $TargetDir/bin/
+
+sudo touch $TargetDir/log/contestnet.log
 ```
 
 This should leave you with a directory structure such as
@@ -223,7 +264,6 @@ This should leave you with a directory structure such as
 opt/contestnet/
 ├── bin
 │   ├── launcher
-│   ├── omxplayer-loop
 │   └── worker
 ├── etc
 │   ├── background.jpg
@@ -236,14 +276,45 @@ opt/contestnet/
 ├── log
 └── var
 
-5 directories, 9 files
+5 directories, 8 files
 ```
 
 
 
 ### Wireless-Monitor
 
-> setup will be completed bac
+In the first year it was observed that a number of the units would lose their connection at various times
+during the day and I ended up taking a lot of support calls from the remote weigh in ports where i had to explain
+the process of force rebooting the display unit to get it to refresh its network driver.
+
+To account for this situation, this wireless-monitor utility was created which will watch for a loss of connection
+and initiate a network service refresh to try and bring it back onto the network.
+
+Its run out of the crontab every 5 minutes so that any offline events are addressed quickly
+
+> This step is just copying the utility to the filesystem, we'll complete its setup back on the running OS
+
+
+With bullseye the commands are different and this may need to be tested a bit more to get it right
+
+`ip addr show wlan0` 
+
+```sh
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP>
+    link/ether [mac address]
+    inet 192.168.1.36/24
+```
+
+`sudo ip link set wlan0 down`
+
+`sudo ip link set wlan0 up`
+
+hostname -I also just prints the IP address, or nothing when the interface is down (but what about disconnected?)
+
+otherwise the command can be changed to:
+```sh
+ip addr show wlan0 | grep 'inet ' | awk '{print $2}'
+```
 
 
 ```sh
@@ -257,83 +328,82 @@ opt/wireless-monitor/
 ```
 
 
-
-### Loopable OMX Player
-
-> copy the three files, two are temp locations
-
-
-
 ## Complete Wireless-Monitor Setup
 
+> Back on the running OS
 
-## Complete Loopable OMX Player
+Set the wireless-monitor script as executable and change the ownership to the
+kiosk user so it can be used directly by that user during normal execution
 
+```sh
+sudo chmod +x /opt/wireless-monitor/bin/wireless-monitor
+sudo chown -R kiosk:users /opt/wireless-monitor
+sudo chmod -R g+w /opt/wireless-monitor 
+```
 
+Set up the crontab for the root user to run the wireless monitor on a short interval
+so if we lose wifi (which seems to be pretty common where these things end up sitting)
+it will attempt to bounce the network interface to bring it back up
 
-## Not updated yet
+> The line is commented out in the base image so it does not run while working on it
+> during individual unit setup you will go in and uncomment the line
 
-	
-
-
-
-
-# 	Installed loopable version of omxplayer to /opt/omxplayer (tarball must be unzipped on machine)
-#	Source Files
-#		omxplayer-loop-multifile-bin.tar.gz
-#		omxplayer
-#		omxplayer-loop
-sudo cp $SourceFiles/omxplayer-loop-multifile-bin.tar.gz /opt/
-sudo tar -xzvf omxplayer-loop-multifile-bin.tar.gz
-sudo mv omxplayer-dist omxplayer
-sudo mv /opt/omxplayer/usr/bin/omxplayer /opt/omxplayer/usr/bin/omxplayer.original
-sudo cp $SourceFiles/omxplayer /opt/omxplayer/usr/bin/omxplayer
-sudo chmod ugo+x /opt/omxplayer/usr/bin/omxplayer
-sudo chown -R run:users /opt/omxplayer
-sudo cp $SourceFiles/omxplayer-loop /opt/contestnet/bin/
-sudo chmod ugo+x /opt/contestnet/bin/omxplayer-loop
-
-#	Installed utility to monitor the wireless link and attempt to bounce if it goes down
-sudo mkdir /opt/wireless-monitor/bin
-sudo mkdir /opt/wireless-monitor/log
-sudo touch /opt/wireless-monitor/log/wireless-monitor.log
-sudo cp $SourceFiles/wireless-monitor /opt/wireless-monitor/bin/
-sudo chmod ugo+x /opt/wireless-monitor/bin/wireless-monitor
-sudo chown -R run:users /opt/wireless-monitor
-
-#	Added entry to root users crontab to run wireless-monitor every 5 minutes
+```sh
 sudo su -
 crontab -e
-#	# */5 * * * * /opt/wireless-monitor/bin/wireless-monitor
-#	Added entry commented out so it does not run in the base image
-#	it will need to be enabled as part of the unit setup
+```
 
-#	Set the run user to auto login on startup
-#	@/etc/inittab
-#	comment out line for tty1 and add new line
-#	#oldline
-#	### ----------------------- Auto Login Run User ----------------------- ###
-#	1:2345:respawn:/bin/login -f run tty1 </dev/tty1 >/dev/tty1 2>&1
-#	### ------------------------------------------------------------------- ###
+> use your favorite editor, i use vim.basic
 
-#	Set the run user to run launcher on login
-#	@/home/run/.bashrc
-#	### -------------- Start Contestnet Terminal Application -------------- ###
-#	#xinit /opt/contestnet/bin/launcher
-#	#exit
-#	### ------------------------------------------------------------------- ###
+Add the below lines to the crontab:
+```sh
+#
+# Wireless-Monitor Utility
+# (Uncomment to activate 5 minute monitor loop)
+#
+#*/5 * * * * /opt/wireless-monitor/bin/wireless-monitor
 
-# Created contestnet-unit-master-2.0-r002.img using ubuntu disk utility (garbage)
-# Created contestnet-unit-master-2.0-r003.img using dd
-
-# 	Set permissions on /opt/contestnet and /opt/wireless-monitor so group can write
-sudo chmod -R g+w /opt/contestnet
-sudo chmod -R g+w /opt/wireless-monitor
-
-#	Changed version of worker to 1.0.1 in base
-#	Updated task.ini so the default resource does not use HTTPS
-
-# Created contestnet-unit-master-2.0-r004.img using dd
+```
 
 
 
+
+## Setup Contestnet
+
+back on the live filesystem
+
+> permissions got weird, everything got marked as executable
+
+```sh
+sudo chown -R kiosk:users /opt/contestnet
+chmod +x /opt/contestnet/bin/launcher
+chmod +x /opt/contestnet/bin/worker
+chmod -x /opt/contestnet/etc/*
+chmod g+w /opt/contestnet/etc/*
+chmod -x /opt/contestnet/lib/Logger.pm
+```
+
+
+## Set the kiosk user to start contestnet on login
+
+Add the following to `/home/kiosk/.bashrc`:
+
+```sh
+### ---------- Start Contestnet Terminal Application ---------- ###
+#xinit /opt/contestnet/bin/launcher
+#exit
+### ----------------------------------------------------------- ###
+```
+
+> The launcher is left disabled in the base image for future maintenance
+> once cloned for use, the comments will be removed
+
+
+
+## Capture Image
+
+```sh
+sudo dd bs=4M if=/dev/sdb status=progress | xz > cn-master-001.img.xz
+```
+
+> real image is now cn-master-003.img.xz
