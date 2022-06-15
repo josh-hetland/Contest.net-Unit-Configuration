@@ -1,13 +1,13 @@
 #!/bin/bash
 
 sInterfaceName="wlan0"
-sIpAddress=`/sbin/ifconfig $sInterfaceName | grep 'inet addr:'| cut -d: -f2 | awk '{ print $1}'`
+sIpAddress=`ip addr show $sInterfaceName | grep 'inet ' | awk '{print $2}'`
 sLogPath=/opt/wireless-monitor/log/wireless-monitor.log
 
 if ! [ $sIpAddress ]
 then
 	echo "[$(date +'%Y-%m-%d %T')] Forcing up [ $sInterfaceName ]" >> $sLogPath
-	RC=(`/sbin/ifup --force $sInterfaceName >/dev/null; echo $?`)
+	RC=(`ip link set $sInterfaceName up >/dev/null; echo $?`)
 	if [ $RC -eq 0 ]
 	then
 		echo "[$(date +'%Y-%m-%d %T')] Interface [ $sInterfaceName ] restarted" >> $sLogPath

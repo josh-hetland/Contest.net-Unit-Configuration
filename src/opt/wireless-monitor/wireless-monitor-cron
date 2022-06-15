@@ -1,0 +1,3 @@
+# Wireless monitor utility to check every 5 minutes for a loss of network access
+# and attempt to force restart the network adapter to bring it back online
+*/5 * * * * root /opt/wireless-monitor/bin/wireless-monitor
